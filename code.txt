@@ -1,0 +1,92 @@
+// components/Chat.tsx
+import { useEffect, useRef, useState } from 'react';
+
+interface Message {
+    text: string;
+    type: 'user' | 'bot';
+}
+
+const mockResponse = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. ".repeat(50); // Mock response
+
+const Chat: React.FC = () => {
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [isAutoScroll, setIsAutoScroll] = useState(true);
+    const [inputValue, setInputValue] = useState('');
+    const chatEndRef = useRef<HTMLDivElement | null>(null);
+
+    const sendMessage = () => {
+        if (inputValue.trim() === '') return; // Prevent sending empty messages
+
+        setMessages(prev => [...prev, { text: inputValue, type: 'user' }]);
+        setInputValue(''); // Clear input field
+
+        // Simulate bot response with streaming effect
+        simulateBotResponse(mockResponse);
+    };
+
+    const simulateBotResponse = (response: string) => {
+        let index = 0;
+        const interval = setInterval(() => {
+            if (index < response.length) {
+                setMessages(prev => {
+                    const lastMessage = prev[prev.length - 1];
+                    if (lastMessage && lastMessage.type === 'bot') {
+                        return [...prev.slice(0, -1), { ...lastMessage, text: lastMessage.text + response[index] }];
+                    } else {
+                        return [...prev, { text: response[index], type: 'bot' }];
+                    }
+                });
+                index++;
+            } else {
+                clearInterval(interval);
+            }
+        }, 10); // Adjust the speed of typing here (100ms per character)
+    };
+
+    useEffect(() => {
+        if (isAutoScroll) {
+            chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }
+    }, [messages, isAutoScroll]);
+
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
+        setIsAutoScroll(scrollHeight - scrollTop === clientHeight);
+    };
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '400px', overflowY: 'auto' }} onScroll={handleScroll}>
+            <div style={{ flexGrow: 1, padding: '10px' }}>
+                {messages.map((msg, index) => (
+                    <div key={index} style={{
+                        textAlign: msg.type === "user" ? "right" : "left",
+                        margin: '5px',
+                        padding: '10px',
+                        borderRadius: '10px',
+                        backgroundColor: msg.type === "user" ? "#dcf8c6" : "#f1f0f0",
+                        color: msg.type === "user" ? "#000" : "#000", // Set text color to black for visibility
+                        maxWidth: '70%',
+                        alignSelf: msg.type === "user" ? "flex-end" : "flex-start"
+                    }}>
+                        {msg.text}
+                    </div>
+                ))}
+                <div ref={chatEndRef} />
+            </div>
+            <div style={{ display: 'flex', padding: '10px' }}>
+                <input
+                    type="text"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    placeholder="Type your message..."
+                    style={{ flexGrow: 1, padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+                />
+                <button onClick={sendMessage} style={{ marginLeft: '10px', padding: '10px', borderRadius: '5px', backgroundColor: '#0070f3', color: 'white', border: 'none' }}>
+                    Send
+                </button>
+            </div>
+        </div>
+    );
+};
+
+export default Chat;
